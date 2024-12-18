@@ -1,10 +1,10 @@
 .build
-.mbed
+#.mbed
 projectfiles
-*.py*
-mbed-os
-BUILD
+#*.py*
+#mbed-os
+#BUILD
 
-compile_commands.json
+#compile_commands.json
 .cache
 .clangd
