@@ -7,6 +7,9 @@
 /* User Libraries */
 #include "front_defs.h"
 
+// if you wanna to push the DEBUG_ST, uncomment this define
+//#define DEBUG
+
 bluetooth bluetooth_packet;
 
 /* Communication Protocols */
@@ -91,6 +94,7 @@ int16_t angle_roll = 0, angle_pitch = 0;
 
 int main ()
 {
+    memset(&bluetooth_packet, 1, sizeof(bluetooth));
     /* Main variables */
     CANMsg txMsg; 
     /* Initialization */
@@ -197,8 +201,7 @@ int main ()
                 {
                     BLE_REQUEST = false;
                     txMsg.clear(MMI_ID);
-                    /* Transform 2 in 1 and 1 in 0, moving the bit to the right */
-                    txMsg << (bluetooth_packet.accel_begin >> 1);
+                    txMsg << bluetooth_packet.accel_begin;
                     can.write(txMsg);
                 }
 
@@ -316,20 +319,19 @@ int main ()
                 break;
 
             case DEBUG_ST:
-                //serial.printf("Debug state\r\n");
-                //serial.printf("Accx = %f\r\n", (float)(LSM6DS3.ax_raw*0.061 / 1000));
-                //serial.printf("Accy = %f\r\n", (float)(LSM6DS3.ay_raw*0.061 / 1000));
-                //serial.printf("Accz = %f\r\n", (float)(LSM6DS3.az_raw*0.061 / 1000));
-                //serial.printf("DPSx = %d\r\n", LSM6DS3.gx_raw);
-                //serial.printf("DPSy = %d\r\n", LSM6DS3.gy_raw);
-                //serial.printf("DPSz = %d\r\n", LSM6DS3.gz_raw);
-                //serial.printf("Angle Roll = %d\r\n", angle_roll);
-                //serial.printf("Angle Pitch = %d\r\n", angle_pitch);
-                //serial.printf("RPM = %d\r\n", RPM);
-                //serial.printf("4x4 = %s\r\n", acopl_4x4.read() ? "Yes" : "No");
-                //serial.printf("switch state = %s\r\n", switch_state==0 ? "MID" : switch_state==1 ? "RUN" : "CHOKE" );
-                //serial.printf("flags = %d\r\n", flags);
-                //serial.printf("\n\n\n");
+                serial.printf("Debug state\r\n");
+                serial.printf("Accx = %f\r\n", (float)(LSM6DS3.ax_raw * 0.061 / 1000));
+                serial.printf("Accy = %f\r\n", (float)(LSM6DS3.ay_raw * 0.061 / 1000));
+                serial.printf("Accz = %f\r\n", (float)(LSM6DS3.az_raw * 0.061 / 1000));
+                serial.printf("DPSx = %d\r\n", LSM6DS3.gx_raw);
+                serial.printf("DPSy = %d\r\n", LSM6DS3.gy_raw);
+                serial.printf("DPSz = %d\r\n", LSM6DS3.gz_raw);
+                serial.printf("Angle Roll = %d\r\n", angle_roll);
+                serial.printf("Angle Pitch = %d\r\n", angle_pitch);
+                serial.printf("RPM = %d\r\n", RPM);
+                serial.printf("switch state = %s\r\n", switch_state==0 ? "MID" : switch_state==1 ? "RUN" : "CHOKE" );
+                serial.printf("flags = %d\r\n", flags);
+                serial.printf("\n\n\n");
                 break;
         }
     }
@@ -566,7 +568,9 @@ void ticker5HzISR()
 {
     state_buffer.push(RPM_ST);
     state_buffer.push(DISPLAY_ST);
-    //state_buffer.push(DEBUG_ST);
+    #ifdef DEBUG
+        state_buffer.push(DEBUG_ST);
+    #endif
     //state_buffer.push(RADIO_ST);
 }
 
