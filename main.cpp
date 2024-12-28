@@ -6,6 +6,7 @@
 #include "Kalman.h"
 /* User Libraries */
 #include "front_defs.h"
+#include <cstdint>
 
 // if you wanna to push the DEBUG_ST, uncomment this define
 //#define DEBUG
@@ -77,7 +78,7 @@ void setupInterrupts();
 void filterMessage(CANMsg msg);
 void calcAngles(int16_t accx, int16_t accy, int16_t accz, int16_t grx, int16_t gry, int16_t grz, int16_t dt);
 void Servo_flag(uint8_t state);
-void displayData(uint16_t vel, uint16_t Hz, uint8_t temp, /*uint16_t comb,*/ uint8_t tempCVT, uint8_t SOC, uint8_t SOT);
+void displayData(packet_t packet);
 
 /* CAN Variables */
 uint16_t RPM = 0;            // 2by
@@ -161,7 +162,8 @@ int main ()
                 else if (imu_failed == IMU_TRIES)
                 {
                     bluetooth_packet.accel_begin = 1;
-                    lsm_addr = LSM6DS3.begin(LSM6DS3.G_SCALE_245DPS, LSM6DS3.A_SCALE_2G, LSM6DS3.G_ODR_26_BW_2, LSM6DS3.A_ODR_26);                                    
+                    lsm_addr = LSM6DS3.begin(LSM6DS3.G_SCALE_245DPS, LSM6DS3.A_SCALE_2G, \
+                                        LSM6DS3.G_ODR_26_BW_2, LSM6DS3.A_ODR_26);                                    
                     //t1 = t.read_us();
                     imu_failed = 0;
                     //serial.printf("%d\r\n", (t1 - t0));
@@ -174,7 +176,8 @@ int main ()
                 }
 
                 last_acq = t.read_ms();
-                calcAngles(LSM6DS3.ax_raw, LSM6DS3.ay_raw, LSM6DS3.az_raw, LSM6DS3.gx_raw, LSM6DS3.gy_raw, LSM6DS3.gz_raw, dt);
+                calcAngles(LSM6DS3.ax_raw, LSM6DS3.ay_raw, LSM6DS3.az_raw, \
+                LSM6DS3.gx_raw, LSM6DS3.gy_raw, LSM6DS3.gz_raw, dt);
 
 
                 /* Send accelerometer data */
@@ -215,7 +218,7 @@ int main ()
                 {
                     //rpm_hz = ((float)pulse_counter/(current_period/1000000.0));    //calculates frequency in Hz
                     //if (switch_state != CHOKE_MODE)
-                    rpm_hz = pulse_counter*5*60;
+                    rpm_hz = pulse_counter * 5 * 60;
                     
                     //engine_counter.start();
                 } 
@@ -237,12 +240,12 @@ int main ()
 
                     Servo_flag(RUN_MODE);
                     
-                    RPM = (uint16_t)(filter.filt(rpm_hz));
+                    data.rpm = RPM = (uint16_t)(filter.filt(rpm_hz));
                 }
 
                 else
                 {
-                    RPM = (uint16_t)(filter.filt(rpm_hz));
+                    data.rpm = RPM = (uint16_t)(filter.filt(rpm_hz));
                 }
                 
                 /* Send RPM data */
@@ -291,10 +294,10 @@ int main ()
                     
                     /* Send CAN message */
                     txMsg.clear(THROTTLE_ID);
-                    txMsg << (RPM!=0 ? RUN_MODE : switch_state);
+                    txMsg << (RPM != 0 ? RUN_MODE : switch_state);
                     can.write(txMsg);
 
-                    Servo_flag(RPM!=0 ? RUN_MODE : switch_state);
+                    Servo_flag(RPM != 0 ? RUN_MODE : switch_state);
 
                     switch_clicked = false;
                 }
@@ -315,7 +318,7 @@ int main ()
 
             case DISPLAY_ST:
                 //serial.printf("display\r\n"); 
-                displayData(data.speed, RPM, data.tempMOTOR, /*data.fuel,*/ data.tempCVT, data.soc, sot);
+                displayData(data);
                 break;
 
             case DEBUG_ST:
@@ -368,7 +371,7 @@ void filterMessage(CANMsg msg)
 {
     led = !led;
 
-    switch(msg.id)
+    switch (msg.id)
     {
         case SPEED_ID:
             msg >> data.speed;
@@ -479,7 +482,7 @@ void Servo_flag(uint8_t state)
 {
     flags &= ~(0x07); // reset servo-related flags
 
-    switch(state) 
+    switch (state) 
     {
         case MID_MODE:
             //dbg3 = !dbg3;
@@ -506,15 +509,15 @@ void Servo_flag(uint8_t state)
     }
 }
 
-void displayData(uint16_t vel, uint16_t Hz, uint8_t temp, /*uint16_t comb,*/ uint8_t tempCVT, uint8_t SOC, uint8_t SOT)
+void displayData(packet_t packet)
 {
-    strc_data.speed = vel;
-    strc_data.rpm = Hz;
-    strc_data.temp_motor = temp;
+    strc_data.speed = packet.speed;
+    strc_data.rpm = packet.rpm;
+    strc_data.temp_motor = packet.tempMOTOR;
     //strc_data.level = comb;
     strc_data.level = 0;
-    strc_data.battery = SOC;
-    strc_data.temp_cvt = tempCVT;
+    strc_data.battery = packet.soc;
+    strc_data.temp_cvt = packet.tempCVT;
     strc_data.sot = sot;
 
     memcpy(&array_data, (uint8_t *)&strc_data, sizeof(strc_data));
