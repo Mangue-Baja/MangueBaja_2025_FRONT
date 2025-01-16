@@ -203,6 +203,7 @@ int main ()
                 if (BLE_REQUEST)
                 {
                     BLE_REQUEST = false;
+                    ThisThread::sleep_for(1);
                     txMsg.clear(MMI_ID);
                     txMsg << bluetooth_packet.accel_begin;
                     can.write(txMsg);
